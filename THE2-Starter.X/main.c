@@ -49,11 +49,11 @@
 #define STATE_HARD_RESET   2
 
 // Timer related definitions (in multiples of 5ms)
-#define PRIZE_BLINK_PERIOD 100     // 500ms
-#define GRAVITY_PERIOD     70      // 350ms
-#define SCORE_PERIOD       200     // 1000ms (1 second)
-#define RESET_BLINK_PERIOD 80      // 400ms
-#define RESET_TOTAL_TIME   400     // 2000ms (2 seconds)
+#define PRIZE_BLINK_PERIOD 500     // 500ms
+#define GRAVITY_PERIOD     350      // 350ms
+#define SCORE_PERIOD       1000     // 1000ms (1 second)
+#define RESET_BLINK_PERIOD 400      // 400ms
+#define RESET_TOTAL_TIME   2000     // 2000ms (2 seconds)
 
 // Game related definitions
 #define MAX_HIPPO_SIZE     5       // Maximum size before reset
@@ -136,9 +136,9 @@ void initializeSystem() {
     // Configure TIMER0 for 5ms interrupt
     T0CON = 0x08;               // 16-bit, internal clock, prescaler off initially
     TMR0H = 0x9E;               // Initialize for 5ms @ 40MHzx
-    TMR0L = 0x57;               // (65535 - 50000) = 0x3CAF
-    T0CONbits.PSA = 0;          // Enable prescaler
-    T0CONbits.T0PS = 0b010;     // 1:8 prescaler
+    TMR0L = 0x58;               // (65535 - 50000) = 0x3CAF
+    T0CONbits.PSA = 0;          // enable prescaler
+    T0CONbits.T0PS = 0b000;     // 1:8 prescaler
     INTCONbits.TMR0IE = 1;      // Enable Timer0 interrupt
     INTCONbits.TMR0IF = 0;      // Clear Timer0 flag
     
@@ -171,38 +171,40 @@ void initializeGame() {
 }
 
 // Update the 7-segment displays with the score
-void updateDisplay() {
-    // Turn off all displays
-    PORTH = 0x00;
-    
-    // Extract the digit for current display position
+void updateAllDisplays() {
     uint16_t score = gameState.totalScore;
-    uint8_t digit = 0;
     
-    // Determine which digit to display
-    switch (currentDisplayIndex) {
-        case 0: // Rightmost digit
-            digit = score % 10;
-            break;
-        case 1:
-            digit = (score / 10) % 10;
-            break;
-        case 2:
-            digit = (score / 100) % 10;
-            break;
-        case 3: // Leftmost digit
-            digit = (score / 1000) % 10;
-            break;
+    // Update all four displays in sequence
+    for (uint8_t i = 0; i < 4; i++) {
+        // Turn off all displays
+        PORTH = 0x00;
+        
+        // Calculate digit to display
+        uint8_t digit = 0;
+        switch (i) {
+            case 0: // Rightmost digit
+                digit = score % 10;
+                break;
+            case 1:
+                digit = (score / 10) % 10;
+                break;
+            case 2:
+                digit = (score / 100) % 10;
+                break;
+            case 3: // Leftmost digit
+                digit = (score / 1000) % 10;
+                break;
+        }
+        
+        // Set segments for current digit
+        PORTJ = SEVEN_SEG_DIGITS[digit];
+        
+        // Enable the current display
+        PORTH = (1 << i);
+        
+        // Small delay to allow display to stabilize
+        __delay_us(500);
     }
-    
-    // Set segments for current digit
-    PORTJ = SEVEN_SEG_DIGITS[digit];
-    
-    // Enable the current display
-    PORTH = (1 << currentDisplayIndex);
-    
-    // Move to next display
-    currentDisplayIndex = (currentDisplayIndex + 1) % 4;
 }
 
 // Update the game display on PORTD
@@ -382,14 +384,11 @@ void __interrupt(high_priority) HandleInterrupt()
     // Timer0 interrupt (5ms)
     if (INTCONbits.TMR0IF) {
         // Reset Timer0
-        TMR0H = 0x9E;               // Reinitialize for 5ms @ 40MHz
-        TMR0L = 0x57;               // (65535 - 25000) = 0x9E57
+        TMR0H = 0x9E;               // Initialize for 5ms @ 40MHzx
+        TMR0L = 0x58;
         
         // Process the timer tick
         processTimerTick();
-        
-        // Update the display
-        updateDisplay();
         
         // Clear the interrupt flag
         INTCONbits.TMR0IF = 0;
@@ -410,7 +409,7 @@ void main()
     // Wait 1 second before starting
     for (uint16_t i = 0; i < 200; i++) {
         // Update display during wait
-        updateDisplay();
+        updateAllDisplays();
         __delay_ms(5);
     }
     
@@ -422,7 +421,7 @@ void main()
         // Update the game display
         updateGameDisplay();
         
-        // Small delay to prevent flicker
-        __delay_ms(1);
+        // Update all 7-segment displays
+        updateAllDisplays();
     }
 }
