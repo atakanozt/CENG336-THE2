@@ -216,13 +216,14 @@ void updateGameDisplay() {
         display = 0b00000001;
     }
     
-    // Add hippo based on position and size
+        // Add hippo based on position and size
     for (uint8_t i = 0; i < gameState.hippoSize; i++) {
-    uint8_t pos = (gameState.hippoPosition + (MAX_POSITION+1) - i) 
-                  % (MAX_POSITION + 1);
-    display |= (1 << pos);
+        uint8_t pos = gameState.hippoPosition - i;
+        if (pos <= MAX_POSITION) {
+            display |= (1 << pos);
+        }
     }
-    
+
     // Special case for reset blinking
     if (gameState.gameState == STATE_SOFT_RESET) {
         // During blinking cycles, alternate between all on and all off
