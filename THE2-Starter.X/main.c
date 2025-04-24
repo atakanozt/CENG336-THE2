@@ -213,15 +213,14 @@ void updateGameDisplay() {
     
     // Add prize if visible
     if (gameState.prizeVisible) {
-        display |= (1 << PRIZE_POSITION);
+        display = 0b00000001;
     }
     
     // Add hippo based on position and size
     for (uint8_t i = 0; i < gameState.hippoSize; i++) {
-        uint8_t pos = gameState.hippoPosition - i;
-        if (pos <= MAX_POSITION) {
-            display |= (1 << pos);
-        }
+    uint8_t pos = (gameState.hippoPosition + (MAX_POSITION+1) - i) 
+                  % (MAX_POSITION + 1);
+    display |= (1 << pos);
     }
     
     // Special case for reset blinking
