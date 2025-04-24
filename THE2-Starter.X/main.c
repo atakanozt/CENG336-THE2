@@ -135,8 +135,8 @@ void initializeSystem() {
     
     // Configure TIMER0 for 5ms interrupt
     T0CON = 0x08;               // 16-bit, internal clock, prescaler off initially
-    TMR0H = 0x3C;               // Initialize for 5ms @ 40MHz
-    TMR0L = 0xAF;               // (65535 - 50000) = 0x3CAF
+    TMR0H = 0x9E;               // Initialize for 5ms @ 40MHzx
+    TMR0L = 0x57;               // (65535 - 50000) = 0x3CAF
     T0CONbits.PSA = 0;          // Enable prescaler
     T0CONbits.T0PS = 0b010;     // 1:8 prescaler
     INTCONbits.TMR0IE = 1;      // Enable Timer0 interrupt
@@ -216,7 +216,7 @@ void updateGameDisplay() {
     
     // Add hippo based on position and size
     for (uint8_t i = 0; i < gameState.hippoSize; i++) {
-        uint8_t pos = gameState.hippoPosition + i;
+        uint8_t pos = gameState.hippoPosition - i;
         if (pos <= MAX_POSITION) {
             display |= (1 << pos);
         }
@@ -382,8 +382,8 @@ void __interrupt(high_priority) HandleInterrupt()
     // Timer0 interrupt (5ms)
     if (INTCONbits.TMR0IF) {
         // Reset Timer0
-        TMR0H = 0x3C;               // Reinitialize for 5ms @ 40MHz
-        TMR0L = 0xAF;               // (65535 - 50000) = 0x3CAF
+        TMR0H = 0x9E;               // Reinitialize for 5ms @ 40MHz
+        TMR0L = 0x57;               // (65535 - 25000) = 0x9E57
         
         // Process the timer tick
         processTimerTick();
