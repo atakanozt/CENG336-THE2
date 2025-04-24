@@ -248,15 +248,22 @@ void moveHippoUp() {
 
 // Move hippo down by one position (gravity)
 void moveHippoDown() {
-    if (gameState.hippoPosition + gameState.hippoSize - 1 < MAX_POSITION) {
+    // Only move down if hippo's head isn't at the bottom
+    if (gameState.hippoPosition < MAX_POSITION) {
         gameState.hippoPosition++;
     }
 }
 
 // Check if hippo has caught the prize
 uint8_t checkPrizeCaught() {
-    // If hippo's head is at prize position
-    return (gameState.hippoPosition == PRIZE_POSITION);
+    // Check if any part of the hippo is at the prize position
+    for (uint8_t i = 0; i < gameState.hippoSize; i++) {
+        uint8_t pos = gameState.hippoPosition - i;
+        if (pos == PRIZE_POSITION) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 // Soft reset after prize is caught
@@ -299,7 +306,7 @@ void completeSoftReset() {
     if (gameState.hippoSize > MAX_HIPPO_SIZE) {
         hardReset();
     } else {
-        // Return hippo to bottom position
+        // Make sure hippo is positioned at bottom
         gameState.hippoPosition = MAX_POSITION;
         
         // Reset current score for next round
