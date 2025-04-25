@@ -79,32 +79,30 @@ const uint8_t SEVEN_SEG_DIGITS[10] = {
 };
 
 // Struct definitions
-typedef struct {
-    uint8_t hippoSize;         // Size of the hippo (1-5)
-    uint8_t hippoPosition;     // Position of hippo head
-    uint8_t prizeVisible;      // Is the prize currently visible (blinking state)
-    uint16_t currentScore;     // Score for the current round (0-100)
-    uint16_t totalScore;       // Total accumulated score
-    uint8_t gameState;         // Current game state
-    uint32_t roundStartTime;   // Time when the current round started (in ms)
-} GameState;
 
-typedef struct {
-    uint16_t gravityCounter;   // Counter for gravity tick (reset at 350ms)
-    uint16_t blinkCounter;     // Counter for prize blink (reset at 500ms)
-    uint16_t scoreCounter;     // Counter for score degradation (reset at 1000ms)
-    uint16_t resetCounter;     // Counter for reset blinking (used during soft reset)
-    uint16_t totalResetTime;   // Total time in reset state
-    uint32_t totalTime;        // Total time since game started (in ms)
-} Timers;
 
 // ============================ //
 //          GLOBALS             //
 // ============================ //
 
-GameState gameState;
-Timers timers;
 uint8_t currentDisplayIndex = 0;    // Current 7-segment display being updated (0-3)
+
+uint8_t hippoSize;         // Size of the hippo (1-5)
+uint8_t hippoPosition;     // Position of hippo head
+uint8_t prizeVisible;      // Is the prize currently visible (blinking state)
+uint16_t currentScore;     // Score for the current round (0-100)
+uint16_t totalScore;       // Total accumulated score
+uint8_t gameState;         // Current game state
+uint32_t roundStartTime;   // Time when the current round started (in ms)
+
+
+uint16_t gravityCounter;   // Counter for gravity tick (reset at 350ms)
+uint16_t blinkCounter;     // Counter for prize blink (reset at 500ms)
+uint16_t scoreCounter;     // Counter for score degradation (reset at 1000ms)
+uint16_t resetCounter;     // Counter for reset blinking (used during soft reset)
+uint16_t totalResetTime;   // Total time in reset state
+uint32_t totalTime;        // Total time since game started (in ms)
+
 
 // ============================ //
 //          FUNCTIONS           //
@@ -150,21 +148,21 @@ void initializeSystem() {
 // Initialize game state
 void initializeGame() {
     // Initialize game state
-    gameState.hippoSize = 1;
-    gameState.hippoPosition = MAX_POSITION;
-    gameState.prizeVisible = 1;
-    gameState.currentScore = INITIAL_SCORE;
-    gameState.totalScore = 0;
-    gameState.gameState = STATE_PLAYING;
-    gameState.roundStartTime = 0;
+    hippoSize = 1;
+    hippoPosition = MAX_POSITION;
+    prizeVisible = 1;
+    currentScore = INITIAL_SCORE;
+    totalScore = 0;
+    gameState = STATE_PLAYING;
+    roundStartTime = 0;
     
     // Initialize timers
-    timers.gravityCounter = 0;
-    timers.blinkCounter = 0;
-    timers.scoreCounter = 0;
-    timers.resetCounter = 0;
-    timers.totalResetTime = 0;
-    timers.totalTime = 0;
+    gravityCounter = 0;
+    blinkCounter = 0;
+    scoreCounter = 0;
+    resetCounter = 0;
+    totalResetTime = 0;
+    totalTime = 0;
     
     // Clear display
     PORTD = 0x00;
@@ -172,7 +170,7 @@ void initializeGame() {
 
 // Update the 7-segment displays with the score
 void updateAllDisplays() {
-    uint16_t score = gameState.totalScore;
+    uint16_t score = totalScore;
     
     // Update all four displays in sequence
     for (uint8_t i = 0; i < 4; i++) {
@@ -213,9 +211,9 @@ void updateGameDisplay() {
     uint8_t display = 0x00;
     
     // CASE 1: During soft reset (after eating prize) - special blinking pattern
-    if (gameState.gameState == STATE_SOFT_RESET) {
+    if (gameState == STATE_SOFT_RESET) {
         // Calculate which blink cycle we're in (each cycle is 400ms)
-        uint8_t blinkCycle = timers.totalResetTime / RESET_BLINK_PERIOD;
+        uint8_t blinkCycle = totalResetTime / RESET_BLINK_PERIOD;
         
         // For even cycles (0, 2, 4) turn ALL LEDs on
         // For odd cycles (1, 3) turn ALL LEDs off
@@ -228,7 +226,7 @@ void updateGameDisplay() {
     // CASE 2: Normal gameplay
     else {
         // Step 1: Display the prize at RD0 (the top-most LED) if it's visible
-        if (gameState.prizeVisible) {
+        if (prizeVisible) {
             // Set the bit at position 0 (RD0) to 1
             display = 0x01;  // Same as (1 << 0) or 0b00000001
         }
@@ -236,11 +234,11 @@ void updateGameDisplay() {
         // Step 2: Display the hippo
         // The hippo is made up of 1 to 5 consecutive LEDs
         // The head is at hippoPosition, and the body extends upward
-        for (uint8_t i = 0; i < gameState.hippoSize; i++) {
+        for (uint8_t i = 0; i < hippoSize; i++) {
             // Calculate position for each segment:
             // - First segment (i=0) is at hippoPosition (the head)
             // - Next segments (i=1,2,3...) extend upward (lower RD values)
-            uint8_t pos = gameState.hippoPosition - i;
+            uint8_t pos = hippoPosition - i;
             
             // Only show the segment if it's within valid LED range
             if (pos <= MAX_POSITION) {  // MAX_POSITION is 7 (RD7)
@@ -274,24 +272,24 @@ void updateGameDisplay() {
 
 // Move hippo up by one position
 void moveHippoUp() {
-    if (gameState.hippoPosition > 0) {
-        gameState.hippoPosition--;
+    if (hippoPosition > 0) {
+        hippoPosition--;
     }
 }
 
 // Move hippo down by one position (gravity)
 void moveHippoDown() {
     // Only move down if hippo's head isn't at the bottom
-    if (gameState.hippoPosition < MAX_POSITION) {
-        gameState.hippoPosition++;
+    if (hippoPosition < MAX_POSITION) {
+        hippoPosition++;
     }
 }
 
 // Check if hippo has caught the prize
 uint8_t checkPrizeCaught() {
     // Check if any part of the hippo is at the prize position
-    for (uint8_t i = 0; i < gameState.hippoSize; i++) {
-        uint8_t pos = gameState.hippoPosition - i;
+    for (uint8_t i = 0; i < hippoSize; i++) {
+        uint8_t pos = hippoPosition - i;
         if (pos == PRIZE_POSITION) {
             return 1;
         }
@@ -302,94 +300,94 @@ uint8_t checkPrizeCaught() {
 // Soft reset after prize is caught
 void softReset() {
     // Update total score with current round score
-    if (gameState.totalScore <= 9999 - gameState.currentScore) {
-        gameState.totalScore += gameState.currentScore;
+    if (totalScore <= 9999 - currentScore) {
+        totalScore += currentScore;
     }
     else {
-        gameState.totalScore = 9999;
+        totalScore = 9999;
     }
     // Change game state to soft reset
-    gameState.gameState = STATE_SOFT_RESET;
+    gameState = STATE_SOFT_RESET;
     
     // Reset timers for blinking
-    timers.resetCounter = 0;
-    timers.totalResetTime = 0;
+    resetCounter = 0;
+    totalResetTime = 0;
 }
 
 // Hard reset when hippo size reaches max
 void hardReset() {
     // Reset hippo size to 1
-    gameState.hippoSize = 1;
+    hippoSize = 1;
     
     // Reset hippo position to bottom
-    gameState.hippoPosition = MAX_POSITION;
+    hippoPosition = MAX_POSITION;
     
     // Reset current score
-    gameState.currentScore = INITIAL_SCORE;
+    currentScore = INITIAL_SCORE;
     
     // Change game state back to playing
-    gameState.gameState = STATE_PLAYING;
+    gameState = STATE_PLAYING;
     
     // Reset round start time
-    gameState.roundStartTime = timers.totalTime;
+    roundStartTime = totalTime;
 }
 
 // Complete the soft reset and prepare for next round
 void completeSoftReset() {
     // Increase hippo size
-    gameState.hippoSize++;
+    hippoSize++;
     
     // Check if hippo size reached max
-    if (gameState.hippoSize > MAX_HIPPO_SIZE) {
+    if (hippoSize > MAX_HIPPO_SIZE) {
         hardReset();
     } else {
         // Make sure hippo is positioned at bottom
-        gameState.hippoPosition = MAX_POSITION;
+        hippoPosition = MAX_POSITION;
         
         // Reset current score for next round
-        gameState.currentScore = INITIAL_SCORE;
+        currentScore = INITIAL_SCORE;
         
         // Return to playing state
-        gameState.gameState = STATE_PLAYING;
+        gameState = STATE_PLAYING;
         
         // Reset prize visibility
-        gameState.prizeVisible = 1;
+        prizeVisible = 1;
         
         // Reset round start time
-        gameState.roundStartTime = timers.totalTime;
+        roundStartTime = totalTime;
     }
 }
 
 // Process timer tick (5ms)
 void processTimerTick() {
     // Update total time
-    timers.totalTime += 5;
+    totalTime += 5;
     
     // Only process game logic if we're in playing state
-    if (gameState.gameState == STATE_PLAYING) {
+    if (gameState == STATE_PLAYING) {
         // Handle prize blinking
-        timers.blinkCounter += 5;
-        if (timers.blinkCounter >= PRIZE_BLINK_PERIOD) {
-            gameState.prizeVisible = !gameState.prizeVisible;
-            timers.blinkCounter = 0;
+        blinkCounter += 5;
+        if (blinkCounter >= PRIZE_BLINK_PERIOD) {
+            prizeVisible = !prizeVisible;
+            blinkCounter = 0;
         }
         
         // Handle gravity
-        timers.gravityCounter += 5;
-        if (timers.gravityCounter >= GRAVITY_PERIOD) {
+        gravityCounter += 5;
+        if (gravityCounter >= GRAVITY_PERIOD) {
             moveHippoDown();
-            timers.gravityCounter = 0;
+            gravityCounter = 0;
         }
         
         // Handle score degradation
-        timers.scoreCounter += 5;
-        if (timers.scoreCounter >= SCORE_PERIOD) {
-            if (gameState.currentScore >= SCORE_DECREMENT) {
-                gameState.currentScore -= SCORE_DECREMENT;
+        scoreCounter += 5;
+        if (scoreCounter >= SCORE_PERIOD) {
+            if (currentScore >= SCORE_DECREMENT) {
+                currentScore -= SCORE_DECREMENT;
             } else {
-                gameState.currentScore = 0;
+                currentScore = 0;
             }
-            timers.scoreCounter = 0;
+            scoreCounter = 0;
         }
         
         // Check if prize caught
@@ -398,12 +396,12 @@ void processTimerTick() {
         }
     } 
     // Handle soft reset state
-    else if (gameState.gameState == STATE_SOFT_RESET) {
-        timers.resetCounter += 5;
-        timers.totalResetTime += 5;
+    else if (gameState == STATE_SOFT_RESET) {
+        resetCounter += 5;
+        totalResetTime += 5;
         
         // End of reset period
-        if (timers.totalResetTime >= RESET_TOTAL_TIME) {
+        if (totalResetTime >= RESET_TOTAL_TIME) {
             completeSoftReset();
         }
     }
@@ -417,7 +415,7 @@ void __interrupt(high_priority) HandleInterrupt()
     // INT0 interrupt (button press)
     if (INTCONbits.INT0IF) {
         // Only move hippo up if in playing state
-        if (gameState.gameState == STATE_PLAYING) {
+        if (gameState == STATE_PLAYING) {
             moveHippoUp();
         }
         
