@@ -302,8 +302,12 @@ uint8_t checkPrizeCaught() {
 // Soft reset after prize is caught
 void softReset() {
     // Update total score with current round score
-    gameState.totalScore += gameState.currentScore;
-    
+    if (gameState.totalScore <= 9999 - gameState.currentScore) {
+        gameState.totalScore += gameState.currentScore;
+    }
+    else {
+        gameState.totalScore = 9999;
+    }
     // Change game state to soft reset
     gameState.gameState = STATE_SOFT_RESET;
     
