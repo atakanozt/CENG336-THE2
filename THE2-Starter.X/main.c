@@ -209,33 +209,66 @@ void updateAllDisplays() {
 
 // Update the game display on PORTD
 void updateGameDisplay() {
+    // Start with all LEDs turned off
     uint8_t display = 0x00;
     
-    // Add prize if visible
-    if (gameState.prizeVisible) {
-        display = 0b00000001;
-    }
-    
-        // Add hippo based on position and size
-    for (uint8_t i = 0; i < gameState.hippoSize; i++) {
-        uint8_t pos = gameState.hippoPosition - i;
-        if (pos <= MAX_POSITION) {
-            display |= (1 << pos);
-        }
-    }
-
-    // Special case for reset blinking
+    // CASE 1: During soft reset (after eating prize) - special blinking pattern
     if (gameState.gameState == STATE_SOFT_RESET) {
-        // During blinking cycles, alternate between all on and all off
+        // Calculate which blink cycle we're in (each cycle is 400ms)
         uint8_t blinkCycle = timers.totalResetTime / RESET_BLINK_PERIOD;
+        
+        // For even cycles (0, 2, 4) turn ALL LEDs on
+        // For odd cycles (1, 3) turn ALL LEDs off
         if (blinkCycle % 2 == 0) {
-            display = 0xFF;  // All LEDs on
+            display = 0xFF;  // 11111111 - All LEDs on
         } else {
-            display = 0x00;  // All LEDs off
+            display = 0x00;  // 00000000 - All LEDs off
+        }
+    }
+    // CASE 2: Normal gameplay
+    else {
+        // Step 1: Display the prize at RD0 (the top-most LED) if it's visible
+        if (gameState.prizeVisible) {
+            // Set the bit at position 0 (RD0) to 1
+            display = 0x01;  // Same as (1 << 0) or 0b00000001
+        }
+        
+        // Step 2: Display the hippo
+        // The hippo is made up of 1 to 5 consecutive LEDs
+        // The head is at hippoPosition, and the body extends upward
+        for (uint8_t i = 0; i < gameState.hippoSize; i++) {
+            // Calculate position for each segment:
+            // - First segment (i=0) is at hippoPosition (the head)
+            // - Next segments (i=1,2,3...) extend upward (lower RD values)
+            uint8_t pos = gameState.hippoPosition - i;
+            
+            // Only show the segment if it's within valid LED range
+            if (pos <= MAX_POSITION) {  // MAX_POSITION is 7 (RD7)
+                // Turn on the LED at position 'pos'
+                
+                // Create a value with only bit 'pos' set to 1
+                uint8_t bitMask = 0;
+                
+                // Set the appropriate bit based on position
+                switch(pos) {
+                    case 0: bitMask = 0b00000001; break; // RD0 (Prize position)
+                    case 1: bitMask = 0b00000010; break; // RD1
+                    case 2: bitMask = 0b00000100; break; // RD2
+                    case 3: bitMask = 0b00001000; break; // RD3
+                    case 4: bitMask = 0b00010000; break; // RD4
+                    case 5: bitMask = 0b00100000; break; // RD5
+                    case 6: bitMask = 0b01000000; break; // RD6
+                    case 7: bitMask = 0b10000000; break; // RD7 (Bottom position)
+                }
+                
+                // Combine the new bit with existing display
+                // This is equivalent to display |= bitMask
+                display = display | bitMask;
+            }
         }
     }
     
-    // Update the display
+    // Finally, update the physical LED display by writing to PORTD
     PORTD = display;
 }
 
